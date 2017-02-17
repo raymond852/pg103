@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html>
+<head>
+	 <meta charset="utf-8">
+	 <title>商品详情</title>
+	 <meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0, minimal-ui" name="viewport">
+	 <meta content="yes" name="apple-mobile-web-app-capable">
+	 <meta content="black" name="apple-mobile-web-app-status-bar-style">
+	 <meta name="format-detection" content="telephone=no">
+	 <style type="text/css">
+	 	body {
+ 		    font-family: "Helvetica Neue",Helvetica,Arial,Sans-serif;
+    		color: #454a57;
+	 	}
+	 	.thw-detail-ratings {
+	 		background-color: #fff;
+ 		    padding: 0 12px;
+	        list-style: none;
+	 	}
+	 	li {
+ 		    padding-top: 20px;
+		    padding-bottom: 12px;
+		    border-bottom: solid 1px #eee;
+		    display: -webkit-box;
+	 	}
+	 	.rating-detail {
+		    padding-left: 12px;
+		    font-size: 14px;
+		    -webkit-box-flex: 1;
+		}
+		.rating-username {
+		    margin-bottom: 12px;
+		    font-weight: 500;
+		    white-space: nowrap;
+		    text-overflow: ellipsis;
+		    overflow: hidden;
+		}
+		.rating-content {
+		    margin-bottom: 8px;
+		}
+		.rating-imgs {
+		    overflow: hidden;
+		}
+		.rating-imgs span {
+		    float: left;
+		    display: -webkit-box;
+		    -webkit-box-align: center;
+		    -webkit-box-pack: center;
+		    border: solid 1px #ddd;
+		    width: 40px;
+		    height: 40px;
+		    margin-right: 8px;
+		    margin-bottom: 8px;
+		}
+		 .rating-imgs span img {
+		    max-width: 100%;
+		    max-height: 100%;
+		}
+		.rating-sku {
+		    font-size: 12px;
+		    color: #999;
+		    line-height: 1.2;
+		    margin: 0 0 8px;
+		}
+	 </style>
+</head>
+<body>
+<ul class="rating-list"></ul>
+<script type="text/javascript">
+  function getUrlParams(name){
+	    var results = new RegExp('[\?&]' + name + '=([^&#]*)').exec(window.location.href);
+	    if (results==null){
+	       return null;
+	    }
+	    else{
+	       return results[1] || 0;
+	    }
+	}
+
+	var sellerId = getUrlParams('sellerId');
+	var itemId = getUrlParams('itemId');
+
+	function handleData(data){
+		var _html = '';
+		for(var i = 0, l = data.rateDetail.rateList.length; i < l; i++) {
+			var _rate = data.rateDetail.rateList[i];
+			var _img = '';
+			if (_rate.pics.length !== 0) {
+				_img += '<div class="rating-imgs">';
+				for(var j = 0, pl = _rate.pics.length; j < pl; j++) {
+					_img += '<span><img src="http:' + _rate.pics[j] + '"></span>';
+				}
+				_img += '</div>';
+			}
+			_html += '<li>' +
+						'<div class="rating-detail">' +
+							'<div class="rating-username">' + _rate.displayUserNick + '</div>' +
+							'<div class="rating-content">' + _rate.rateContent + '</div>' + _img +
+							'<div class="rating-sku">' + _rate.rateDate + ' ' + _rate.auctionSku +
+						'</div>' +
+					 '</li>';
+		}
+		var ratings = document.getElementsByClassName('rating-list');
+		ratings[0].innerHTML = _html;
+	}
+
+	var $jsonp = (function(){
+	  var that = {};
+
+	  that.send = function(src, options) {
+	    var callback_name = options.callbackName || 'jsonp_reviews_list',
+	      on_success = options.onSuccess || function(){},
+	      on_timeout = options.onTimeout || function(){},
+	      timeout = options.timeout || 10; // sec
+
+	    var timeout_trigger = window.setTimeout(function(){
+	      window[callback_name] = function(){};
+	      on_timeout();
+	    }, timeout * 1000);
+
+	    window[callback_name] = function(data){
+	      window.clearTimeout(timeout_trigger);
+	      on_success(data);
+	    }
+
+	    var script = document.createElement('script');
+	    script.type = 'text/javascript';
+	    script.async = true;
+	    script.src = src;
+
+	    document.getElementsByTagName('head')[0].appendChild(script);
+	  }
+
+	  return that;
+	})();
+
+
+	function start() {
+		$jsonp.send('https://rate.tmall.com/list_detail_rate.htm?callback=jsonp_reviews_list&_lang=zh_CN%3ATB-GBK&order=3&append=0&content=0&pageSize=10&tagId=&currentPage=1&n=10&offset=0&sellerId=' + sellerId + '&itemId=' + itemId, {
+			callbackName:'jsonp_reviews_list',
+			onSuccess:function(json){
+                    var dataStr = JSON.stringify(json).toLowerCase();
+                    if (dataStr.indexOf("spider") >= 0) {
+                        console.log(JSON.stringify(json));
+                        setTimeout( function() {
+                                   start();
+                                   },4000);
+                    } else {
+                        try {
+                            if (json.rateDetail.rateList.length > 0) {
+                                console.log(JSON.stringify(json));
+                                handleData(json);
+                            } else {
+                                console.log(JSON.stringify(json));
+                                throw "error"
+                            }
+                        } catch(err) {
+                            setTimeout( function() {
+                               start();
+                               },4000);
+                        }
+                    }
+	    },
+			onTimeout: function(){
+	        console.log('timeout!');
+					start();
+	    },
+	    timeout: 10
+		})
+	}
+
+	start();
+
+
+</script>
+</body>
+</html>
